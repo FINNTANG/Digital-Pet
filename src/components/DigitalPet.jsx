@@ -21,7 +21,10 @@ const DigitalPet = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState('');
   const [currentSprite, setCurrentSprite] = useState('');
-  const [dialoguePosition, setDialoguePosition] = useState({ x: '50%', y: null });
+  const [dialoguePosition, setDialoguePosition] = useState({
+    x: '50%',
+    y: null,
+  });
   const dialogueRef = useRef(null);
   const isDraggingRef = useRef(false);
   const dragStartPosRef = useRef({ x: 0, y: 0 });
@@ -135,10 +138,16 @@ const DigitalPet = () => {
     try {
       const analysis = await analyzeImage(imageDataUrl);
       setAnalysisResult(analysis);
-      
+
       // 添加值的限制
-      petState.health = Math.min(100, Math.max(0, petState.health + analysis.healthEffect));
-      petState.happiness = Math.min(100, Math.max(0, petState.happiness + analysis.moodEffect));
+      petState.health = Math.min(
+        100,
+        Math.max(0, petState.health + analysis.healthEffect),
+      );
+      petState.happiness = Math.min(
+        100,
+        Math.max(0, petState.happiness + analysis.moodEffect),
+      );
       petState.updateState();
       setStatus(petState.state);
     } catch (error) {
@@ -170,7 +179,7 @@ const DigitalPet = () => {
 
   const handleResponse = async (option) => {
     setIsWaitingResponse(true);
-    const isSilent = option === "...";
+    const isSilent = option === '...';
     petState.interact(isSilent);
     try {
       const response = await chatMessage(
@@ -183,15 +192,24 @@ const DigitalPet = () => {
 
       setDialogue({
         message: response.message,
-        options: [...response.options, "I'm sorry, I can't keep you company right now"],
+        options: [
+          ...response.options,
+          "I'm sorry, I can't keep you company right now",
+        ],
       });
 
       // 添加值的限制
-      petState.health = Math.min(100, Math.max(0, petState.health + response.health));
-      petState.happiness = Math.min(100, Math.max(0, petState.happiness + response.mood));
+      petState.health = Math.min(
+        100,
+        Math.max(0, petState.health + response.health),
+      );
+      petState.happiness = Math.min(
+        100,
+        Math.max(0, petState.happiness + response.mood),
+      );
       setStatus(petState.state);
     } catch (error) {
-      console.error("Conversation generation failed:", error);
+      console.error('Conversation generation failed:', error);
       setDisplayedMessage("Sorry, I'm a bit tired right now...");
     } finally {
       setIsWaitingResponse(false);
@@ -201,20 +219,32 @@ const DigitalPet = () => {
   const getPetSprite = () => {
     // 根据状态和心情值选择不同表情
     if (petState.health < 30 || petState.happiness < 30) {
-      return ['(´;ω;`)', '(╥﹏╥)', '(｡•́︿•̀｡)', '(っ˘̩╭╮˘̩)っ'][Math.floor(Math.random() * 4)];
+      return ['(´;ω;`)', '(╥﹏╥)', '(｡•́︿•̀｡)', '(っ˘̩╭╮˘̩)っ'][
+        Math.floor(Math.random() * 4)
+      ];
     }
-    
+
     switch (status) {
       case 'happy':
-        return ['(｡◕‿◕｡)', '(◕‿◕✿)', '(◠‿◠)', '(＾▽＾)', '(◍•ᴗ•◍)'][Math.floor(Math.random() * 5)];
+        return ['(｡◕‿◕｡)', '(◕‿◕✿)', '(◠‿◠)', '(＾▽＾)', '(◍•ᴗ•◍)'][
+          Math.floor(Math.random() * 5)
+        ];
       case 'sad':
-        return ['(´･_･`)', '(｡•́︿•̀｡)', '(｡╯︵╰｡)', '(っ- ‸ – ς)'][Math.floor(Math.random() * 4)];
+        return ['(´･_･`)', '(｡•́︿•̀｡)', '(｡╯︵╰｡)', '(っ- ‸ – ς)'][
+          Math.floor(Math.random() * 4)
+        ];
       case 'sick':
-        return ['(；一_一)', '(￣ヘ￣)', '(-.-)Zzz...', '(。-ω-)'][Math.floor(Math.random() * 4)];
+        return ['(；一_一)', '(￣ヘ￣)', '(-.-)Zzz...', '(。-ω-)'][
+          Math.floor(Math.random() * 4)
+        ];
       case 'dead':
-        return ['(×_×)', '(✖╭╮✖)', '(╯︵╰,)', '(︶︹︺)'][Math.floor(Math.random() * 4)];
+        return ['(×_×)', '(✖╭╮✖)', '(╯︵╰,)', '(︶︹︺)'][
+          Math.floor(Math.random() * 4)
+        ];
       default:
-        return ['(・∀・)', '(｡♥‿♥｡)', '(◕ᴗ◕✿)', '(◠‿◠✿)', '(◕‿◕)'][Math.floor(Math.random() * 5)];
+        return ['(・∀・)', '(｡♥‿♥｡)', '(◕ᴗ◕✿)', '(◠‿◠✿)', '(◕‿◕)'][
+          Math.floor(Math.random() * 5)
+        ];
     }
   };
 
@@ -230,7 +260,7 @@ const DigitalPet = () => {
         left: `${Math.random() * 100}%`,
         top: `${Math.random() * 100}%`,
         '--float-duration': `${3 + Math.random() * 2}s`,
-        '--float-delay': `-${Math.random() * 2}s`
+        '--float-delay': `-${Math.random() * 2}s`,
       };
       dots.push(<div key={i} className="pixel-dot" style={style} />);
     }
@@ -240,41 +270,41 @@ const DigitalPet = () => {
   // 添加拖动处理函数
   const handleMouseDown = (e) => {
     if (e.target.closest('.dialogue-close')) return;
-    
+
     isDraggingRef.current = true;
     const dialogue = dialogueRef.current;
     const rect = dialogue.getBoundingClientRect();
-    
+
     // 记录鼠标相对于对话框的偏移
     dragStartPosRef.current = {
       x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      y: e.clientY - rect.top,
     };
-    
+
     // 设置初始位置
     if (!dialogue.style.left) {
       dialogue.style.left = `${rect.left}px`;
       dialogue.style.top = `${rect.top}px`;
     }
-    
+
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   };
 
   const handleMouseMove = (e) => {
     if (!isDraggingRef.current) return;
-    
+
     e.preventDefault();
     const dialogue = dialogueRef.current;
-    
+
     // 直接使用鼠标位置减去偏移量
     const x = e.clientX - dragStartPosRef.current.x;
     const y = e.clientY - dragStartPosRef.current.y;
-    
+
     // 设置新位置
     dialogue.style.left = `${x}px`;
     dialogue.style.top = `${y}px`;
-    
+
     // 更新状态
     setDialoguePosition({ x, y });
   };
@@ -295,9 +325,7 @@ const DigitalPet = () => {
 
   return (
     <>
-      <div className="pixel-dots">
-        {generatePixelDots()}
-      </div>
+      <div className="pixel-dots">{generatePixelDots()}</div>
       <div className="pet-container">
         <div className="status-bar">
           <div className="status-indicator">
@@ -305,11 +333,17 @@ const DigitalPet = () => {
               <span className="status-label">Health</span>
             </div>
             <div className="progress-container">
-              <div 
-                className={`progress-bar health ${petState.health < 30 ? 'warning' : ''}`} 
-                style={{width: `${Math.min(100, Math.max(0, petState.health))}%`}}
+              <div
+                className={`progress-bar health ${
+                  petState.health < 30 ? 'warning' : ''
+                }`}
+                style={{
+                  width: `${Math.min(100, Math.max(0, petState.health))}%`,
+                }}
               >
-                <span className="progress-value">{Math.round(petState.health)}%</span>
+                <span className="progress-value">
+                  {Math.round(petState.health)}%
+                </span>
               </div>
             </div>
           </div>
@@ -319,11 +353,17 @@ const DigitalPet = () => {
               <span className="status-label">Happiness</span>
             </div>
             <div className="progress-container">
-              <div 
-                className={`progress-bar happiness ${petState.happiness < 30 ? 'warning' : ''}`}
-                style={{width: `${Math.min(100, Math.max(0, petState.happiness))}%`}}
+              <div
+                className={`progress-bar happiness ${
+                  petState.happiness < 30 ? 'warning' : ''
+                }`}
+                style={{
+                  width: `${Math.min(100, Math.max(0, petState.happiness))}%`,
+                }}
               >
-                <span className="progress-value">{Math.round(petState.happiness)}%</span>
+                <span className="progress-value">
+                  {Math.round(petState.happiness)}%
+                </span>
               </div>
             </div>
           </div>
@@ -334,53 +374,67 @@ const DigitalPet = () => {
             <div className="toolbar-title">TAMAGOTCHI.EXE</div>
             <span className="window-controls">─ □ ×</span>
           </div>
-          <div className="text-8xl pet-sprite">{currentSprite}</div>
+          <div className="mt-8 mb-8 text-8xl text-center pet-sprite">
+            {currentSprite}
+          </div>
 
           {/* 宠物对话窗口 */}
-          <div 
-            ref={dialogueRef}
-            className={`pet-dialogue-bubble ${showChat ? 'active' : ''}`}
-            style={{
-              left: showChat && !dialoguePosition.x ? '50%' : `${dialoguePosition.x}px`,
-              top: showChat && !dialoguePosition.y ? '70%' : `${dialoguePosition.y}px`,
-              transform: showChat && !dialoguePosition.x ? 'translateX(-50%)' : 'none'
-            }}
-          >
-            <div 
-              className="dialogue-toolbar"
-              onMouseDown={handleMouseDown}
+        </div>
+        {showChat ? (
+          <div className="dialogue-toolbar" onMouseDown={handleMouseDown}>
+            <div className="dialogue-title">CHAT.EXE</div>
+            <button
+              className="dialogue-close"
+              onClick={() => setShowChat(false)}
             >
-              <div className="dialogue-title">CHAT.EXE</div>
-              <button className="dialogue-close" onClick={() => setShowChat(false)}>×</button>
-            </div>
-            
-            <div className="dialogue-content">
-              {isWaitingResponse ? (
-                <LoadingIndicator />
-              ) : (
-                <p className="typing-text">
-                  {displayedMessage}
-                  {isTyping && <span className="cursor">|</span>}
-                </p>
-              )}
-            </div>
+              ×
+            </button>
+          </div>
+        ) : null}
 
-            {showChat && dialogue && !isTyping && (
-              <div className="response-options">
-                {dialogue.options.map((option, index) => (
-                  <button
-                    key={index}
-                    className="response-button"
-                    onClick={() => handleResponse(option)}
-                    disabled={isWaitingResponse}
-                  >
-                    <span className="response-arrow">►</span>
-                    {option}
-                  </button>
-                ))}
-              </div>
+        <div
+          ref={dialogueRef}
+          className={`pet-dialogue-bubble ${showChat ? 'active' : ''}`}
+          style={{
+            marginTop: '4px',
+            left:
+              showChat && !dialoguePosition.x
+                ? '50%'
+                : `${dialoguePosition.x}px`,
+            top:
+              showChat && !dialoguePosition.y
+                ? '70%'
+                : `${dialoguePosition.y}px`,
+            transform:
+              showChat && !dialoguePosition.x ? 'translateX(-50%)' : 'none',
+          }}
+        >
+          <div className="dialogue-content">
+            {isWaitingResponse ? (
+              <LoadingIndicator />
+            ) : (
+              <p className="typing-text">
+                {displayedMessage}
+                {isTyping && <span className="cursor">|</span>}
+              </p>
             )}
           </div>
+
+          {showChat && dialogue && !isTyping && (
+            <div className="response-options">
+              {dialogue.options.map((option, index) => (
+                <button
+                  key={index}
+                  className="response-button"
+                  onClick={() => handleResponse(option)}
+                  disabled={isWaitingResponse}
+                >
+                  <span className="response-arrow">►</span>
+                  {option}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 摄像头区域 */}
@@ -393,10 +447,15 @@ const DigitalPet = () => {
           <div className="camera-window">
             <div className="window-toolbar">
               <div className="toolbar-title">CAMERA.EXE</div>
-              <button className="window-close" onClick={() => {
-                stopCamera();
-                setShowCamera(false);
-              }}>×</button>
+              <button
+                className="window-close"
+                onClick={() => {
+                  stopCamera();
+                  setShowCamera(false);
+                }}
+              >
+                ×
+              </button>
             </div>
             <div className="camera-container">
               <video
@@ -425,10 +484,15 @@ const DigitalPet = () => {
           <div className="analysis-window">
             <div className="window-toolbar">
               <div className="toolbar-title">ANALYSIS.EXE</div>
-              <button className="window-close" onClick={() => {
-                setCapturedImage(null);
-                setAnalysisResult('');
-              }}>×</button>
+              <button
+                className="window-close"
+                onClick={() => {
+                  setCapturedImage(null);
+                  setAnalysisResult('');
+                }}
+              >
+                ×
+              </button>
             </div>
             <div className="analysis-content">
               <div className="captured-image-container">
@@ -443,7 +507,10 @@ const DigitalPet = () => {
                     }}
                   />
                 </div>
-                <div className={`analysis-result ${isAnalyzing ? 'analyzing' : ''}`}>
+                <div
+                  className={`analysis-result ${
+                    isAnalyzing ? 'analyzing' : ''}`}
+                >
                   {isAnalyzing ? (
                     <div className="analyzing-status">
                       <div className="loading-dots">
@@ -489,7 +556,8 @@ const DigitalPet = () => {
                                       : 'negative'
                                   }`}
                                 >
-                                  Happiness {analysisResult.moodEffect > 0 ? '+' : ''}
+                                  Happiness{' '}
+                                  {analysisResult.moodEffect > 0 ? '+' : ''}
                                   {analysisResult.moodEffect}
                                 </span>
                               )}
@@ -501,7 +569,8 @@ const DigitalPet = () => {
                                       : 'negative'
                                   }`}
                                 >
-                                  Health {analysisResult.healthEffect > 0 ? '+' : ''}
+                                  Health{' '}
+                                  {analysisResult.healthEffect > 0 ? '+' : ''}
                                   {analysisResult.healthEffect}
                                 </span>
                               )}
@@ -545,8 +614,8 @@ const DigitalPet = () => {
         {cameraPermission === 'denied' && (
           <div className="relative px-4 py-3 text-red-700 bg-red-100 rounded border border-red-400">
             <span>
-              Camera access is blocked. Please allow camera access in your browser
-              settings.
+              Camera access is blocked. Please allow camera access in your
+              browser settings.
             </span>
           </div>
         )}
