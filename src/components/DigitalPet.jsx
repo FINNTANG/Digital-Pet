@@ -5,6 +5,7 @@ import analyzeImage from '../utils/imageAnalysis.js';
 import chatMessage from '../utils/chatGenerate.js';
 import '../styles/Pet.css';
 import { HintWindow } from './ui/hint';
+import BackgroundMusic from './BackgroundMusic';
 
 const DigitalPet = () => {
   const [dialogue, setDialogue] = useState(null);
@@ -412,6 +413,7 @@ Have fun with your new digital friend! ✨`;
 
   return (
     <>
+      <BackgroundMusic audioUrl="/assets/background-music.mp3" />
       <div className="pixel-dots">{generatePixelDots()}</div>
       <HintWindow
         message={hintMessage}
