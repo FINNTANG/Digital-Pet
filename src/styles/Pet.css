@@ -322,20 +322,102 @@ body::after,
 
 .pet-sprite {
   font-size: 4rem;
-  /* position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%); */
   color: #fff;
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5), 0 0 20px rgba(0, 255, 255, 0.3),
-    2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5), 
+               0 0 20px rgba(0, 255, 255, 0.3),
+               2px 2px 0 #000, 
+               -2px -2px 0 #000, 
+               2px -2px 0 #000, 
+               -2px 2px 0 #000;
   white-space: nowrap;
   line-height: 1;
   font-family: monospace;
   z-index: 2;
-  /* animation: float 3s ease-in-out infinite; */
-  letter-spacing: 0.1em;
-  /* filter: url(#pixel-filter); */
+  animation: petFloat 3s ease-in-out infinite;
+  position: relative;
+}
+
+/* 添加浮动动画 */
+@keyframes petFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(2deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(-2deg);
+  }
+}
+
+/* 添加呼吸效果 */
+.pet-sprite::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  animation: shadowPulse 3s ease-in-out infinite;
+}
+
+@keyframes shadowPulse {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateX(-50%) scale(0.8);
+    opacity: 0.1;
+  }
+}
+
+/* 添加心情不好时的动画 */
+.pet-sprite.sad {
+  animation: sadShake 3s ease-in-out infinite;
+}
+
+@keyframes sadShake {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-5px) rotate(-3deg);
+  }
+  75% {
+    transform: translateY(-5px) rotate(3deg);
+  }
+}
+
+/* 添加开心时的动画 */
+.pet-sprite.happy {
+  animation: happyBounce 2s ease-in-out infinite;
+}
+
+@keyframes happyBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.1);
+  }
+}
+
+/* 添加生病时的动画 */
+.pet-sprite.sick {
+  animation: sickWobble 4s ease-in-out infinite;
+}
+
+@keyframes sickWobble {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-5px) rotate(-2deg);
+  }
+  75% {
+    transform: translateY(5px) rotate(2deg);
+  }
 }
 
 @keyframes glitch {
@@ -548,16 +630,19 @@ body::after,
 .pet-dialogue-bubble {
   background: #1a1a1a;
   padding: 1.5rem;
-  /* position: fixed; */
-  width: 100%;
-  margin: 0;
+  position: fixed;
+  width: 500px;
+  max-width: 90vw;
   z-index: 1000;
   border: 2px solid #fff;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 0 2px #fff,
     0 0 0 4px #000, 0 0 0 5px rgba(255, 255, 255, 0.3);
-  display: none;
   cursor: move;
   user-select: none;
+  touch-action: none;
+  transform: translate(0, 0);
+  will-change: transform;
+  transition: none;
 }
 
 .pixel-border {
@@ -604,7 +689,7 @@ body::after,
 .response-button {
   padding: 1rem 1.5rem;
   background: #2c2c2c;
-  color: #fff;
+  color: white;
   border: 4px solid #000;
   box-shadow: inset -4px -4px 0 0 #1a1a1a, inset 4px 4px 0 0 #444;
   cursor: pointer;
@@ -1182,19 +1267,35 @@ body::after,
 }
 
 .talk-button {
-  background: #4a90e2;
+  background: #3388ff;
+  border: 4px solid #000;
+  box-shadow: 
+    inset -4px -4px 0 0 #0066cc,
+    inset 4px 4px 0 0 #66aaff;
 }
 
 .talk-button:hover {
-  background: #357abd;
+  background: #66aaff;
+  box-shadow: 
+    inset -4px -4px 0 0 #3388ff,
+    inset 4px 4px 0 0 #99ccff,
+    0 0 8px rgba(102, 170, 255, 0.3);
 }
 
 .feed-button {
-  background: #2ecc71;
+  background: #00cc88;
+  border: 4px solid #000;
+  box-shadow: 
+    inset -4px -4px 0 0 #009966,
+    inset 4px 4px 0 0 #00ffaa;
 }
 
 .feed-button:hover {
-  background: #27ae60;
+  background: #00ffaa;
+  box-shadow: 
+    inset -4px -4px 0 0 #00cc88,
+    inset 4px 4px 0 0 #66ffcc,
+    0 0 8px rgba(0, 255, 170, 0.3);
 }
 
 .feed-button:hover .camera-icon,
@@ -1260,22 +1361,15 @@ body::after,
 
 /* 添加对话框顶部工具栏 */
 .dialogue-toolbar {
-  /* position: absolute; */
-  top: -32px;
-  left: -2px;
-  right: -2px;
-  height: 32px;
+  padding: 0.5rem;
   background: #2c2c2c;
-  border: 2px solid #fff;
-  border-bottom: none;
+  border-bottom: 2px solid #fff;
   display: flex;
   align-items: center;
-  padding: 0 0.5rem;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #000, 0 0 0 5px rgba(255, 255, 255, 0.3);
-  /* cursor: move; */
+  justify-content: space-between;
+  cursor: move;
   user-select: none;
   touch-action: none;
-  z-index: 1001;
 }
 
 .dialogue-title {
@@ -1458,4 +1552,260 @@ body::after,
   font-family: 'Press Start 2P', cursive;
   font-size: 0.8rem;
   line-height: 1.5;
+}
+
+/* 添加拖动时的样式 */
+.pet-dialogue-bubble.dragging {
+  opacity: 0.95;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 0 2px #fff,
+    0 0 0 4px #000, 0 0 0 5px rgba(255, 255, 255, 0.3),
+    0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.take-photo-btn {
+  transition: transform 0.2s ease;
+}
+
+.button-pressed {
+  transform: scale(0.95);
+}
+
+/* 添加加载状态指示 */
+.loading-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+}
+
+.loading .loading-indicator {
+  display: block;
+}
+
+/* 添加错误提示样式 */
+.error-message-popup {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 0, 0, 0.9);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 4px;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.8rem;
+  z-index: 1000;
+  animation: slideDown 0.3s ease-out;
+  border: 2px solid #000;
+  box-shadow: 0 0 0 2px #fff, 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.error-message-popup.fade-out {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+}
+
+/* 添加按钮点击反馈样式 */
+.control-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  image-rendering: pixelated;
+  text-shadow: 2px 2px #000;
+}
+
+.control-button:active {
+  transform: scale(0.95);
+  box-shadow: 
+    inset -2px -2px 0 0 rgba(0, 0, 0, 0.5),
+    inset 2px 2px 0 0 rgba(255, 255, 255, 0.3);
+}
+
+/* 移除之前的闪光动画效果 */
+.control-button::before {
+  display: none;
+}
+
+/* 添加加载状态样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #fff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 在其他按钮样式后添加 */
+.hint-button {
+  background: #cc33ff;
+  border: 4px solid #000;
+  box-shadow: 
+    inset -4px -4px 0 0 #9933cc,
+    inset 4px 4px 0 0 #ff66ff;
+}
+
+.hint-button:hover {
+  background: #ff66ff;
+  box-shadow: 
+    inset -4px -4px 0 0 #cc33ff,
+    inset 4px 4px 0 0 #ff99ff,
+    0 0 8px rgba(255, 102, 255, 0.3);
+}
+
+.hint-icon {
+  content: '';
+  display: block;
+  width: 24px;
+  height: 24px;
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  filter: brightness(0) invert(1);
+}
+
+.hint-icon::before {
+  content: '?';
+  position: absolute;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 16px;
+  left: 7px;
+  top: -2px;
+  color: white;
+}
+
+.hint-icon::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid white;
+  border-radius: 50%;
+  left: 2px;
+  top: 0;
+}
+
+/* 添加相机扫描效果 */
+.camera-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.camera-container::before {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(0, 255, 255, 0.1),
+    transparent
+  );
+  animation: scanEffect 2s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.camera-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 20px 20px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes scanEffect {
+  0% {
+    top: -100%;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+/* 添加按钮通用效果 */
+.control-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.control-button::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shimmer 2s infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(45deg);
+  }
 }

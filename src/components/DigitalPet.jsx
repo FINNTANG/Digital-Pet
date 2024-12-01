@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import petState from '../utils/petState.jsx';
 import { getRandomDialogue } from '../utils/dialogueSystem.jsx';
 import analyzeImage from '../utils/imageAnalysis.js';
 import chatMessage from '../utils/chatGenerate.js';
 import '../styles/Pet.css';
+import { HintWindow } from './ui/hint';
 
 const DigitalPet = () => {
   const [dialogue, setDialogue] = useState(null);
@@ -21,13 +22,40 @@ const DigitalPet = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState('');
   const [currentSprite, setCurrentSprite] = useState('');
-  const [dialoguePosition, setDialoguePosition] = useState({
-    x: '50%',
-    y: null,
+  const [dialoguePosition, setDialoguePosition] = useState(() => {
+    const initialX = (window.innerWidth - 500) / 2;
+    const initialY = window.innerHeight - 400;
+    return { x: initialX, y: initialY };
   });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const dialogueRef = useRef(null);
-  const isDraggingRef = useRef(false);
-  const dragStartPosRef = useRef({ x: 0, y: 0 });
+  const [showHint, setShowHint] = useState(false);
+  const [cameraPosition, setCameraPosition] = useState(() => ({
+    x: (window.innerWidth - 800) / 2, // 800是相机窗口的最大宽度
+    y: 100 // 设置一个合适的初始Y位置
+  }));
+  const [cameraIsDragging, setCameraIsDragging] = useState(false);
+  const [cameraDragOffset, setCameraDragOffset] = useState({ x: 0, y: 0 });
+  const cameraRef = useRef(null);
+
+  // 修改提示信息为更简洁的版本
+  const hintMessage = `[ DIGITAL PET GUIDE ]
+
+❤️ Health & Mood
+• Both stats decrease over time
+• Keep them above 30% to avoid distress
+
+🎮 Controls
+• FEED - Show objects via camera
+• TALK - Chat with your pet
+
+💡 Tips
+• Different items = Different reactions
+• Regular chats = Happy pet
+• Low stats = Sad expressions
+
+Have fun with your new digital friend! ✨`;
 
   // 检查摄像头权限
   useEffect(() => {
@@ -84,6 +112,17 @@ const DigitalPet = () => {
         setIsCameraActive(true);
         setShowCamera(true);
         setCapturedImage(null);
+        
+        // 修改相机窗口的初始位置和大小
+        const windowWidth = 1000;
+        const windowHeight = 600;
+        const mainContainer = document.querySelector('.pet-container');
+        const mainRect = mainContainer.getBoundingClientRect();
+        
+        setCameraPosition({
+          x: mainRect.left + (mainRect.width - windowWidth) / 2 + 150, // 将右偏移从 200px 减少到 150px
+          y: mainRect.top + 150
+        });
       }
     } catch (err) {
       console.error('摄像头启动失败:', err);
@@ -269,63 +308,116 @@ const DigitalPet = () => {
 
   // 添加拖动处理函数
   const handleMouseDown = (e) => {
-    if (e.target.closest('.dialogue-close')) return;
-
-    isDraggingRef.current = true;
-    const dialogue = dialogueRef.current;
-    const rect = dialogue.getBoundingClientRect();
-
-    // 记录鼠标相对于对话框的偏移
-    dragStartPosRef.current = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
-
-    // 设置初始位置
-    if (!dialogue.style.left) {
-      dialogue.style.left = `${rect.left}px`;
-      dialogue.style.top = `${rect.top}px`;
+    if (dialogueRef.current) {
+      const rect = dialogueRef.current.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+      setIsDragging(true);
     }
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleMouseMove = (e) => {
-    if (!isDraggingRef.current) return;
-
-    e.preventDefault();
-    const dialogue = dialogueRef.current;
-
-    // 直接使用鼠标位置减去偏移量
-    const x = e.clientX - dragStartPosRef.current.x;
-    const y = e.clientY - dragStartPosRef.current.y;
-
-    // 设置新位置
-    dialogue.style.left = `${x}px`;
-    dialogue.style.top = `${y}px`;
-
-    // 更新状态
-    setDialoguePosition({ x, y });
-  };
+  const handleMouseMove = useCallback((e) => {
+    if (isDragging) {
+      const x = e.clientX - dragOffset.x;
+      const y = e.clientY - dragOffset.y;
+      
+      // 确保对话框不会被拖出视口
+      const maxX = window.innerWidth - (dialogueRef.current?.offsetWidth || 0);
+      const maxY = window.innerHeight - (dialogueRef.current?.offsetHeight || 0);
+      
+      setDialoguePosition({
+        x: Math.max(0, Math.min(x, maxX)),
+        y: Math.max(0, Math.min(y, maxY))
+      });
+    }
+  }, [isDragging, dragOffset]);
 
   const handleMouseUp = () => {
-    isDraggingRef.current = false;
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
+    setIsDragging(false);
   };
 
-  // 在组件卸载时清理事件监听器
+  // 添加事件监听器
   useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
+  }, [isDragging, handleMouseMove]);
+
+  // 添加窗口大小变化的监听
+  useEffect(() => {
+    const handleResize = () => {
+      // 当窗口大小改变时，重新计算对话框位置，保持在底部中间
+      setDialoguePosition(prev => ({
+        x: (window.innerWidth - 500) / 2,
+        y: window.innerHeight - 400
+      }));
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // 添加相机窗口拖拽处理函数
+  const handleCameraMouseDown = (e) => {
+    if (cameraRef.current) {
+      const rect = cameraRef.current.getBoundingClientRect();
+      setCameraDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+      setCameraIsDragging(true);
+    }
+  };
+
+  const handleCameraMouseMove = useCallback((e) => {
+    if (cameraIsDragging) {
+      const x = e.clientX - cameraDragOffset.x;
+      const y = e.clientY - cameraDragOffset.y;
+      
+      // 确保窗口不会被拖出视口
+      const maxX = window.innerWidth - (cameraRef.current?.offsetWidth || 0);
+      const maxY = window.innerHeight - (cameraRef.current?.offsetHeight || 0);
+      
+      setCameraPosition({
+        x: Math.max(0, Math.min(x, maxX)),
+        y: Math.max(0, Math.min(y, maxY))
+      });
+    }
+  }, [cameraIsDragging, cameraDragOffset]);
+
+  const handleCameraMouseUp = () => {
+    setCameraIsDragging(false);
+  };
+
+  // 添加相机拖拽事件监听器
+  useEffect(() => {
+    if (cameraIsDragging) {
+      window.addEventListener('mousemove', handleCameraMouseMove);
+      window.addEventListener('mouseup', handleCameraMouseUp);
+    }
+    
+    return () => {
+      window.removeEventListener('mousemove', handleCameraMouseMove);
+      window.removeEventListener('mouseup', handleCameraMouseUp);
+    };
+  }, [cameraIsDragging, handleCameraMouseMove]);
 
   return (
     <>
       <div className="pixel-dots">{generatePixelDots()}</div>
+      <HintWindow
+        message={hintMessage}
+        isOpen={showHint}
+        onClose={() => setShowHint(false)}
+      />
       <div className="pet-container">
         <div className="status-bar">
           <div className="status-indicator">
@@ -371,81 +463,79 @@ const DigitalPet = () => {
 
         <div className="pet-display">
           <div className="window-toolbar">
-            <div className="toolbar-title">TAMAGOTCHI.EXE</div>
+            <div className="toolbar-title">REALITYEATER.EXE</div>
             <span className="window-controls">─ □ ×</span>
           </div>
-          <div className="mt-8 mb-8 text-8xl text-center pet-sprite">
+          <div className={`mt-8 mb-8 text-8xl text-center pet-sprite ${status}`}>
             {currentSprite}
           </div>
 
           {/* 宠物对话窗口 */}
         </div>
         {showChat ? (
-          <div className="dialogue-toolbar" onMouseDown={handleMouseDown}>
-            <div className="dialogue-title">CHAT.EXE</div>
-            <button
-              className="dialogue-close"
-              onClick={() => setShowChat(false)}
+          <div
+            ref={dialogueRef}
+            className={`pet-dialogue-bubble ${isDragging ? 'dragging' : ''}`}
+            style={{
+              display: showChat ? 'block' : 'none',
+              left: `${dialoguePosition.x}px`,
+              top: `${dialoguePosition.y}px`
+            }}
+          >
+            <div 
+              className="dialogue-toolbar"
+              onMouseDown={handleMouseDown}
             >
-              ×
-            </button>
-          </div>
-        ) : null}
+              <div className="dialogue-title">CHAT.EXE</div>
+              <button className="dialogue-close" onClick={() => setShowChat(false)}>×</button>
+            </div>
+            <div className="dialogue-content">
+              {isWaitingResponse ? (
+                <LoadingIndicator />
+              ) : (
+                <p className="typing-text">
+                  {displayedMessage}
+                  {isTyping && <span className="cursor">|</span>}
+                </p>
+              )}
+            </div>
 
-        <div
-          ref={dialogueRef}
-          className={`pet-dialogue-bubble ${showChat ? 'active' : ''}`}
-          style={{
-            marginTop: '4px',
-            left:
-              showChat && !dialoguePosition.x
-                ? '50%'
-                : `${dialoguePosition.x}px`,
-            top:
-              showChat && !dialoguePosition.y
-                ? '70%'
-                : `${dialoguePosition.y}px`,
-            transform:
-              showChat && !dialoguePosition.x ? 'translateX(-50%)' : 'none',
-          }}
-        >
-          <div className="dialogue-content">
-            {isWaitingResponse ? (
-              <LoadingIndicator />
-            ) : (
-              <p className="typing-text">
-                {displayedMessage}
-                {isTyping && <span className="cursor">|</span>}
-              </p>
+            {showChat && dialogue && !isTyping && (
+              <div className="response-options">
+                {dialogue.options.map((option, index) => (
+                  <button
+                    key={index}
+                    className="response-button"
+                    onClick={() => handleResponse(option)}
+                    disabled={isWaitingResponse}
+                  >
+                    <span className="response-arrow">►</span>
+                    {option}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-
-          {showChat && dialogue && !isTyping && (
-            <div className="response-options">
-              {dialogue.options.map((option, index) => (
-                <button
-                  key={index}
-                  className="response-button"
-                  onClick={() => handleResponse(option)}
-                  disabled={isWaitingResponse}
-                >
-                  <span className="response-arrow">►</span>
-                  {option}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        ) : null}
 
         {/* 摄像头区域 */}
         <div
           className="camera-section"
           style={{
             display: showCamera ? 'block' : 'none',
+            position: 'fixed',
+            left: `${cameraPosition.x}px`,
+            top: `${cameraPosition.y}px`,
+            zIndex: 1000,
           }}
+          ref={cameraRef}
         >
           <div className="camera-window">
-            <div className="window-toolbar">
+            <div 
+              className="window-toolbar"
+              onMouseDown={handleCameraMouseDown}
+              style={{ cursor: 'grab' }}
+            >
               <div className="toolbar-title">CAMERA.EXE</div>
               <button
                 className="window-close"
@@ -576,7 +666,7 @@ const DigitalPet = () => {
                               )}
                               {analysisResult.moodEffect === 0 &&
                                 analysisResult.healthEffect === 0 && (
-                                  <span className="effect neutral">无效果</span>
+                                  <span className="effect neutral">no effect</span>
                                 )}
                             </div>
                           </div>
@@ -594,7 +684,7 @@ const DigitalPet = () => {
           </div>
         )}
 
-        {/* 控制按钮 */}
+        {/* 控按钮 */}
         <div className="control-buttons">
           <button
             className="control-button feed-button"
@@ -604,13 +694,23 @@ const DigitalPet = () => {
             <span className="camera-icon"></span>
             {isCameraActive ? 'CLOSE CAMERA' : 'FEED'}
           </button>
-          <button className="control-button talk-button" onClick={handleChat}>
+          <button 
+            className="control-button talk-button" 
+            onClick={handleChat}
+          >
             <span className="chat-icon"></span>
             TALK
           </button>
+          <button 
+            className="control-button hint-button" 
+            onClick={() => setShowHint(true)}
+          >
+            <span className="hint-icon"></span>
+            HINT
+          </button>
         </div>
 
-        {/* 摄像头权限被拒绝的提示 */}
+        {/* 摄像头权限被拒绝的示 */}
         {cameraPermission === 'denied' && (
           <div className="relative px-4 py-3 text-red-700 bg-red-100 rounded border border-red-400">
             <span>
