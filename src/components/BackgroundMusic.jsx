@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const BackgroundMusic = ({ audioUrl }) => {
-  const audioRef = useRef(null);
+  const audioRef = useRef(document.getElementById('backgroundMusic'));
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
@@ -9,7 +9,7 @@ const BackgroundMusic = ({ audioUrl }) => {
     if (audio) {
       audio.load();
       audio.volume = 0.2;
-      
+
       const handleCanPlayThrough = () => {
         console.log('Audio can play through');
       };
@@ -31,12 +31,12 @@ const BackgroundMusic = ({ audioUrl }) => {
                 console.log('Audio started playing');
                 document.removeEventListener('click', handleFirstInteraction);
               })
-              .catch(error => {
-                console.error("Play failed:", error);
+              .catch((error) => {
+                console.error('Play failed:', error);
               });
           }
         } catch (error) {
-          console.error("Play error:", error);
+          console.error('Play error:', error);
         }
       };
 
@@ -64,8 +64,8 @@ const BackgroundMusic = ({ audioUrl }) => {
             .then(() => {
               setIsPlaying(true);
             })
-            .catch(error => {
-              console.error("Play failed:", error);
+            .catch((error) => {
+              console.error('Play failed:', error);
             });
         }
       } else {
@@ -73,30 +73,23 @@ const BackgroundMusic = ({ audioUrl }) => {
         setIsPlaying(false);
       }
     } catch (error) {
-      console.error("Toggle play error:", error);
+      console.error('Toggle play error:', error);
     }
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed right-4 bottom-4 z-50">
       <button
         onClick={togglePlay}
         className="bg-[#1a1a1a] p-2 border-2 border-white font-['Press_Start_2P'] text-xs text-white"
         style={{
-          boxShadow: 'inset -2px -2px 0 0 #000, inset 2px 2px 0 0 #444'
+          boxShadow: 'inset -2px -2px 0 0 #000, inset 2px 2px 0 0 #444',
         }}
       >
         {isPlaying ? 'SOUND ON' : 'SOUND OFF'}
       </button>
-      <audio
-        ref={audioRef}
-        src={`/assets/background-music.mp3`}
-        loop
-        preload="auto"
-        type="audio/mpeg"
-      />
     </div>
   );
 };
 
-export default BackgroundMusic; 
+export default BackgroundMusic;

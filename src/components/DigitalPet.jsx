@@ -34,7 +34,7 @@ const DigitalPet = () => {
   const [showHint, setShowHint] = useState(false);
   const [cameraPosition, setCameraPosition] = useState(() => ({
     x: (window.innerWidth - 800) / 2, // 800是相机窗口的最大宽度
-    y: 100 // 设置一个合适的初始Y位置
+    y: 100, // 设置一个合适的初始Y位置
   }));
   const [cameraIsDragging, setCameraIsDragging] = useState(false);
   const [cameraDragOffset, setCameraDragOffset] = useState({ x: 0, y: 0 });
@@ -113,16 +113,16 @@ Have fun with your new digital friend! ✨`;
         setIsCameraActive(true);
         setShowCamera(true);
         setCapturedImage(null);
-        
+
         // 修改相机窗口的初始位置和大小
         const windowWidth = 1000;
         const windowHeight = 600;
         const mainContainer = document.querySelector('.pet-container');
         const mainRect = mainContainer.getBoundingClientRect();
-        
+
         setCameraPosition({
           x: mainRect.left + (mainRect.width - windowWidth) / 2 + 150, // 将右偏移从 200px 减少到 150px
-          y: mainRect.top + 150
+          y: mainRect.top + 150,
         });
       }
     } catch (err) {
@@ -313,27 +313,32 @@ Have fun with your new digital friend! ✨`;
       const rect = dialogueRef.current.getBoundingClientRect();
       setDragOffset({
         x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        y: e.clientY - rect.top,
       });
       setIsDragging(true);
     }
   };
 
-  const handleMouseMove = useCallback((e) => {
-    if (isDragging) {
-      const x = e.clientX - dragOffset.x;
-      const y = e.clientY - dragOffset.y;
-      
-      // 确保对话框不会被拖出视口
-      const maxX = window.innerWidth - (dialogueRef.current?.offsetWidth || 0);
-      const maxY = window.innerHeight - (dialogueRef.current?.offsetHeight || 0);
-      
-      setDialoguePosition({
-        x: Math.max(0, Math.min(x, maxX)),
-        y: Math.max(0, Math.min(y, maxY))
-      });
-    }
-  }, [isDragging, dragOffset]);
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (isDragging) {
+        const x = e.clientX - dragOffset.x;
+        const y = e.clientY - dragOffset.y;
+
+        // 确保对话框不会被拖出视口
+        const maxX =
+          window.innerWidth - (dialogueRef.current?.offsetWidth || 0);
+        const maxY =
+          window.innerHeight - (dialogueRef.current?.offsetHeight || 0);
+
+        setDialoguePosition({
+          x: Math.max(0, Math.min(x, maxX)),
+          y: Math.max(0, Math.min(y, maxY)),
+        });
+      }
+    },
+    [isDragging, dragOffset],
+  );
 
   const handleMouseUp = () => {
     setIsDragging(false);
@@ -345,7 +350,7 @@ Have fun with your new digital friend! ✨`;
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
-    
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -356,9 +361,9 @@ Have fun with your new digital friend! ✨`;
   useEffect(() => {
     const handleResize = () => {
       // 当窗口大小改变时，重新计算对话框位置，保持在底部中间
-      setDialoguePosition(prev => ({
+      setDialoguePosition((prev) => ({
         x: (window.innerWidth - 500) / 2,
-        y: window.innerHeight - 400
+        y: window.innerHeight - 400,
       }));
     };
 
@@ -372,27 +377,31 @@ Have fun with your new digital friend! ✨`;
       const rect = cameraRef.current.getBoundingClientRect();
       setCameraDragOffset({
         x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        y: e.clientY - rect.top,
       });
       setCameraIsDragging(true);
     }
   };
 
-  const handleCameraMouseMove = useCallback((e) => {
-    if (cameraIsDragging) {
-      const x = e.clientX - cameraDragOffset.x;
-      const y = e.clientY - cameraDragOffset.y;
-      
-      // 确保窗口不会被拖出视口
-      const maxX = window.innerWidth - (cameraRef.current?.offsetWidth || 0);
-      const maxY = window.innerHeight - (cameraRef.current?.offsetHeight || 0);
-      
-      setCameraPosition({
-        x: Math.max(0, Math.min(x, maxX)),
-        y: Math.max(0, Math.min(y, maxY))
-      });
-    }
-  }, [cameraIsDragging, cameraDragOffset]);
+  const handleCameraMouseMove = useCallback(
+    (e) => {
+      if (cameraIsDragging) {
+        const x = e.clientX - cameraDragOffset.x;
+        const y = e.clientY - cameraDragOffset.y;
+
+        // 确保窗口不会被拖出视口
+        const maxX = window.innerWidth - (cameraRef.current?.offsetWidth || 0);
+        const maxY =
+          window.innerHeight - (cameraRef.current?.offsetHeight || 0);
+
+        setCameraPosition({
+          x: Math.max(0, Math.min(x, maxX)),
+          y: Math.max(0, Math.min(y, maxY)),
+        });
+      }
+    },
+    [cameraIsDragging, cameraDragOffset],
+  );
 
   const handleCameraMouseUp = () => {
     setCameraIsDragging(false);
@@ -404,7 +413,7 @@ Have fun with your new digital friend! ✨`;
       window.addEventListener('mousemove', handleCameraMouseMove);
       window.addEventListener('mouseup', handleCameraMouseUp);
     }
-    
+
     return () => {
       window.removeEventListener('mousemove', handleCameraMouseMove);
       window.removeEventListener('mouseup', handleCameraMouseUp);
@@ -413,7 +422,7 @@ Have fun with your new digital friend! ✨`;
 
   return (
     <>
-      <BackgroundMusic audioUrl="/assets/background-music.mp3" />
+      <BackgroundMusic audioUrl="/music.mp3" />
       <div className="pixel-dots">{generatePixelDots()}</div>
       <HintWindow
         message={hintMessage}
@@ -468,7 +477,9 @@ Have fun with your new digital friend! ✨`;
             <div className="toolbar-title">REALITYEATER.EXE</div>
             <span className="window-controls">─ □ ×</span>
           </div>
-          <div className={`mt-8 mb-8 text-8xl text-center pet-sprite ${status}`}>
+          <div
+            className={`mt-8 mb-8 text-8xl text-center pet-sprite ${status}`}
+          >
             {currentSprite}
           </div>
 
@@ -481,15 +492,17 @@ Have fun with your new digital friend! ✨`;
             style={{
               display: showChat ? 'block' : 'none',
               left: `${dialoguePosition.x}px`,
-              top: `${dialoguePosition.y}px`
+              top: `${dialoguePosition.y}px`,
             }}
           >
-            <div 
-              className="dialogue-toolbar"
-              onMouseDown={handleMouseDown}
-            >
+            <div className="dialogue-toolbar" onMouseDown={handleMouseDown}>
               <div className="dialogue-title">CHAT.EXE</div>
-              <button className="dialogue-close" onClick={() => setShowChat(false)}>×</button>
+              <button
+                className="dialogue-close"
+                onClick={() => setShowChat(false)}
+              >
+                ×
+              </button>
             </div>
             <div className="dialogue-content">
               {isWaitingResponse ? (
@@ -533,7 +546,7 @@ Have fun with your new digital friend! ✨`;
           ref={cameraRef}
         >
           <div className="camera-window">
-            <div 
+            <div
               className="window-toolbar"
               onMouseDown={handleCameraMouseDown}
               style={{ cursor: 'grab' }}
@@ -601,7 +614,8 @@ Have fun with your new digital friend! ✨`;
                 </div>
                 <div
                   className={`analysis-result ${
-                    isAnalyzing ? 'analyzing' : ''}`}
+                    isAnalyzing ? 'analyzing' : ''
+                  }`}
                 >
                   {isAnalyzing ? (
                     <div className="analyzing-status">
@@ -668,7 +682,9 @@ Have fun with your new digital friend! ✨`;
                               )}
                               {analysisResult.moodEffect === 0 &&
                                 analysisResult.healthEffect === 0 && (
-                                  <span className="effect neutral">no effect</span>
+                                  <span className="effect neutral">
+                                    no effect
+                                  </span>
                                 )}
                             </div>
                           </div>
@@ -696,15 +712,12 @@ Have fun with your new digital friend! ✨`;
             <span className="camera-icon"></span>
             {isCameraActive ? 'CLOSE CAMERA' : 'FEED'}
           </button>
-          <button 
-            className="control-button talk-button" 
-            onClick={handleChat}
-          >
+          <button className="control-button talk-button" onClick={handleChat}>
             <span className="chat-icon"></span>
             TALK
           </button>
-          <button 
-            className="control-button hint-button" 
+          <button
+            className="control-button hint-button"
             onClick={() => setShowHint(true)}
           >
             <span className="hint-icon"></span>

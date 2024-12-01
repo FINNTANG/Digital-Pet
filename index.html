@@ -4,26 +4,47 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Digital Pet</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
+    <audio
+      id="backgroundMusic"
+      src="./background-music.mp3"
+      loop
+      preload="auto"
+    ></audio>
     <!-- SVG滤镜定义 -->
-    <svg style="position: absolute; width: 0; height: 0;" aria-hidden="true">
+    <svg style="position: absolute; width: 0; height: 0" aria-hidden="true">
       <defs>
         <filter id="pixel-filter">
-          <feFlood x="0" y="0" width="100%" height="100%" flood-color="#000000" result="background"/>
-          <feMorphology operator="dilate" radius="1" in="SourceGraphic" result="pixelate"/>
-          <feComposite in="pixelate" in2="background" operator="over"/>
+          <feFlood
+            x="0"
+            y="0"
+            width="100%"
+            height="100%"
+            flood-color="#000000"
+            result="background"
+          />
+          <feMorphology
+            operator="dilate"
+            radius="1"
+            in="SourceGraphic"
+            result="pixelate"
+          />
+          <feComposite in="pixelate" in2="background" operator="over" />
         </filter>
       </defs>
     </svg>
-    
+
     <!-- 代码雨容器 -->
     <div class="matrix-container" id="matrix"></div>
-    
+
     <div id="root"></div>
     <script type="module" src="/src/index.jsx"></script>
-    
+
     <!-- 代码雨脚本 -->
     <script>
       class MatrixColumn {
@@ -42,16 +63,16 @@
             left: ${x}px;
             will-change: transform;
           `;
-          
+
           // 减少字符数量，提高性能
-          this.maxLength = Math.ceil(window.innerHeight / fontSize * 0.8);
-          
+          this.maxLength = Math.ceil((window.innerHeight / fontSize) * 0.8);
+
           // 使用文档片段优化DOM操作
           const fragment = document.createDocumentFragment();
           for (let i = 0; i < this.maxLength; i++) {
             const char = document.createElement('div');
             char.className = 'matrix-char dim';
-            char.textContent = String.fromCharCode(0x30A0 + Math.random() * 96);
+            char.textContent = String.fromCharCode(0x30a0 + Math.random() * 96);
             this.chars.push(char);
             fragment.appendChild(char);
           }
@@ -60,7 +81,7 @@
 
         update() {
           this.y += this.speed * 2;
-          
+
           if (this.y > window.innerHeight) {
             this.y = -this.maxLength * this.fontSize;
             // 批量更新字符，减少重绘
@@ -72,8 +93,10 @@
                     newChars.push(i);
                   }
                 }
-                newChars.forEach(i => {
-                  this.chars[i].textContent = String.fromCharCode(0x30A0 + Math.random() * 96);
+                newChars.forEach((i) => {
+                  this.chars[i].textContent = String.fromCharCode(
+                    0x30a0 + Math.random() * 96,
+                  );
                 });
               });
             }
@@ -81,15 +104,20 @@
 
           // 使用transform3d触发GPU加速
           this.element.style.transform = `translate3d(0, ${this.y}px, 0)`;
-          
+
           // 降低更新频率
           if (Math.random() < 0.05) {
-            const headIndex = Math.floor((this.y + window.innerHeight) / this.fontSize) % this.maxLength;
+            const headIndex =
+              Math.floor((this.y + window.innerHeight) / this.fontSize) %
+              this.maxLength;
             requestAnimationFrame(() => {
               this.chars.forEach((char, i) => {
-                const className = i === headIndex ? 'matrix-char bright' :
-                                (i === (headIndex + 1) % this.maxLength) ? 'matrix-char medium' :
-                                'matrix-char dim';
+                const className =
+                  i === headIndex
+                    ? 'matrix-char bright'
+                    : i === (headIndex + 1) % this.maxLength
+                    ? 'matrix-char medium'
+                    : 'matrix-char dim';
                 if (char.className !== className) {
                   char.className = className;
                 }
@@ -112,22 +140,28 @@
 
         setup() {
           // 减少列数，增加间距
-          const columnCount = Math.floor(window.innerWidth / (this.fontSize * 2));
+          const columnCount = Math.floor(
+            window.innerWidth / (this.fontSize * 2),
+          );
           const fragment = document.createDocumentFragment();
-          
+
           for (let i = 0; i < columnCount; i++) {
             const speed = 0.8 + Math.random() * 0.6; // 降低速度范围
-            const column = new MatrixColumn(i * (this.fontSize * 2), this.fontSize, speed);
+            const column = new MatrixColumn(
+              i * (this.fontSize * 2),
+              this.fontSize,
+              speed,
+            );
             this.columns.push(column);
             fragment.appendChild(column.element);
           }
-          
+
           this.container.appendChild(fragment);
         }
 
         animate(currentTime) {
           requestAnimationFrame((time) => this.animate(time));
-          
+
           // 帧率控制
           if (currentTime - this.lastTime < this.frameInterval) {
             return;
@@ -135,7 +169,7 @@
           this.lastTime = currentTime;
 
           // 批量更新
-          this.columns.forEach(column => column.update());
+          this.columns.forEach((column) => column.update());
         }
 
         cleanup() {
@@ -147,9 +181,12 @@
       // 使用 requestIdleCallback 延迟初始化
       let matrixInstance = null;
       if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => {
-          matrixInstance = new MatrixRain();
-        }, { timeout: 1000 });
+        requestIdleCallback(
+          () => {
+            matrixInstance = new MatrixRain();
+          },
+          { timeout: 1000 },
+        );
       } else {
         setTimeout(() => {
           matrixInstance = new MatrixRain();
@@ -171,4 +208,4 @@
       });
     </script>
   </body>
-</html> 
+</html>
