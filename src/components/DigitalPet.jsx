@@ -114,15 +114,14 @@ Have fun with your new digital friend! ✨`;
         setShowCamera(true);
         setCapturedImage(null);
 
-        // 修改相机窗口的初始位置和大小
+        // 修改这里：设置固定的初始位置
         const windowWidth = 1000;
-        const windowHeight = 600;
         const mainContainer = document.querySelector('.pet-container');
         const mainRect = mainContainer.getBoundingClientRect();
 
         setCameraPosition({
-          x: mainRect.left + (mainRect.width - windowWidth) / 2 + 150, // 将右偏移从 200px 减少到 150px
-          y: mainRect.top + 150,
+          x: mainRect.left + (mainRect.width - windowWidth) / 2 + 150,
+          y: 150, // 使用固定的 y 值，而不是相对于 mainRect.top 的值
         });
       }
     } catch (err) {
