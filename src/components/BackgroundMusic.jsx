@@ -81,12 +81,15 @@ const BackgroundMusic = ({ audioUrl }) => {
     <div className="fixed right-4 bottom-4 z-50">
       <button
         onClick={togglePlay}
-        className="bg-[#1a1a1a] p-2 border-2 border-white font-['Press_Start_2P'] text-xs text-white"
+        className="bg-[#1a1a1a] px-4 py-2 border-2 border-white font-['Press_Start_2P'] text-xs text-white"
         style={{
-          boxShadow: 'inset -2px -2px 0 0 #000, inset 2px 2px 0 0 #444',
+          boxShadow: 'inset -2px -2px 0 0 #000, inset 2px 2px 0 0 #444'
         }}
       >
-        {isPlaying ? 'SOUND ON' : 'SOUND OFF'}
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-green-400' : 'bg-red-400'}`} />
+          {isPlaying ? 'SOUND ON' : 'SOUND OFF'}
+        </div>
       </button>
     </div>
   );

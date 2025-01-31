@@ -28,8 +28,15 @@ const DigitalPet = () => {
     const initialY = window.innerHeight - 400;
     return { x: initialX, y: initialY };
   });
+  const [activeWindow, setActiveWindow] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [windowPositions, setWindowPositions] = useState({
+    camera: { x: window.innerWidth / 2 - 400, y: window.innerHeight / 2 - 300 },
+    chat: { x: window.innerWidth / 2 - 250, y: window.innerHeight / 2 - 200 },
+    hint: { x: window.innerWidth / 2 - 225, y: window.innerHeight / 2 - 175 },
+    analysis: { x: window.innerWidth / 2 - 150, y: window.innerHeight / 2 - 250 }
+  });
   const dialogueRef = useRef(null);
   const [showHint, setShowHint] = useState(false);
   const [cameraPosition, setCameraPosition] = useState(() => ({
@@ -39,6 +46,14 @@ const DigitalPet = () => {
   const [cameraIsDragging, setCameraIsDragging] = useState(false);
   const [cameraDragOffset, setCameraDragOffset] = useState({ x: 0, y: 0 });
   const cameraRef = useRef(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const audioRef = useRef(new Audio('./background-music.mp3')); // 使用正确的文件路径
+  const [draggedWindow, setDraggedWindow] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragRef = useRef(null);
+  const [isTypingHint, setIsTypingHint] = useState(false);
+  const [displayedHint, setDisplayedHint] = useState('');
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   // 修改提示信息为更简洁的版本
   const hintMessage = `[ DIGITAL PET GUIDE ]
@@ -155,45 +170,23 @@ Have fun with your new digital friend! ✨`;
   };
 
   const captureImage = async () => {
-    if (!videoRef.current) return;
-
-    const canvas = document.createElement('canvas');
-    const videoWidth = videoRef.current.videoWidth;
-    const videoHeight = videoRef.current.videoHeight;
-
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
-
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(videoRef.current, 0, 0, videoWidth, videoHeight);
-
-    const imageDataUrl = canvas.toDataURL('image/jpeg');
-    setCapturedImage(imageDataUrl);
-    stopCamera();
-
-    // 添加加载状态
-    setIsAnalyzing(true);
-
-    try {
-      const analysis = await analyzeImage(imageDataUrl);
-      setAnalysisResult(analysis);
-
-      // 添加值的限制
-      petState.health = Math.min(
-        100,
-        Math.max(0, petState.health + analysis.healthEffect),
-      );
-      petState.happiness = Math.min(
-        100,
-        Math.max(0, petState.happiness + analysis.moodEffect),
-      );
-      petState.updateState();
-      setStatus(petState.state);
-    } catch (error) {
-      console.error('Analysis failed:', error);
-      setAnalysisResult('Sorry, I can not recognize this item');
-    } finally {
-      setIsAnalyzing(false);
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(videoRef.current, 0, 0);
+      const imageData = canvas.toDataURL('image/jpeg');
+      setCapturedImage(imageData);
+      
+      // 调用图像分析API
+      try {
+        const result = await analyzeImage(imageData);
+        setAnalysisResult(result);
+        setShowAnalysis(true);
+      } catch (error) {
+        console.error('图像分析失败:', error);
+      }
     }
   };
 
@@ -306,55 +299,86 @@ Have fun with your new digital friend! ✨`;
     return dots;
   };
 
-  // 添加拖动处理函数
-  const handleMouseDown = (e) => {
-    if (dialogueRef.current) {
-      const rect = dialogueRef.current.getBoundingClientRect();
-      setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
-      setIsDragging(true);
+  // 修改拖拽相关的状态和逻辑
+  const handleMouseDown = (e, windowType) => {
+    // 只有点击工具栏才能拖动
+    if (e.target.closest('.window-close')) {
+      return;
     }
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDraggedWindow(windowType);
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+    
+    // 存储初始位置
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialLeft: rect.left,
+      initialTop: rect.top
+    };
   };
 
-  const handleMouseMove = useCallback(
-    (e) => {
-      if (isDragging) {
-        const x = e.clientX - dragOffset.x;
-        const y = e.clientY - dragOffset.y;
+  const handleMouseMove = useCallback((e) => {
+    if (draggedWindow && dragRef.current) {
+      const deltaX = e.clientX - dragRef.current.startX;
+      const deltaY = e.clientY - dragRef.current.startY;
+      
+      // 添加边界限制
+      const newX = Math.max(0, Math.min(window.innerWidth - 400, dragRef.current.initialLeft + deltaX));
+      const newY = Math.max(0, Math.min(window.innerHeight - 300, dragRef.current.initialTop + deltaY));
+      
+      setWindowPositions(prev => ({
+        ...prev,
+        [draggedWindow]: {
+          x: newX,
+          y: newY
+        }
+      }));
+    }
+  }, [draggedWindow]);
 
-        // 确保对话框不会被拖出视口
-        const maxX =
-          window.innerWidth - (dialogueRef.current?.offsetWidth || 0);
-        const maxY =
-          window.innerHeight - (dialogueRef.current?.offsetHeight || 0);
+  const handleMouseUp = useCallback(() => {
+    setDraggedWindow(null);
+    dragRef.current = null;
+  }, []);
 
-        setDialoguePosition({
-          x: Math.max(0, Math.min(x, maxX)),
-          y: Math.max(0, Math.min(y, maxY)),
-        });
+  // 确保关闭按钮正常工作
+  const handleClose = (windowType) => {
+    if (windowType === 'camera') {
+      stopCamera();
+      setShowCamera(false);
+    } else if (windowType === 'chat') {
+      setShowChat(false);
+    } else if (windowType === 'hint') {
+      setShowHint(false);
+    } else if (windowType === 'analysis') {
+      setShowAnalysis(false);
+    }
+    // 清除该窗口的位置信息
+    setWindowPositions(prev => ({
+      ...prev,
+      [windowType]: {
+        x: window.innerWidth / 2 - (windowType === 'camera' ? 400 : windowType === 'chat' ? 250 : windowType === 'hint' ? 225 : 150),
+        y: window.innerHeight / 2 - (windowType === 'camera' ? 300 : windowType === 'chat' ? 200 : windowType === 'hint' ? 175 : 250)
       }
-    },
-    [isDragging, dragOffset],
-  );
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
+    }));
   };
 
-  // 添加事件监听器
+  // 添加和移除事件监听器
   useEffect(() => {
-    if (isDragging) {
+    if (draggedWindow) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
-
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, handleMouseMove]);
+  }, [draggedWindow, handleMouseMove, handleMouseUp]);
 
   // 添加窗口大小变化的监听
   useEffect(() => {
@@ -370,371 +394,305 @@ Have fun with your new digital friend! ✨`;
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 添加相机窗口拖拽处理函数
-  const handleCameraMouseDown = (e) => {
-    if (cameraRef.current) {
-      const rect = cameraRef.current.getBoundingClientRect();
-      setCameraDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
-      setCameraIsDragging(true);
+  // 优化音频控制函数
+  const toggleSound = useCallback(() => {
+    const audio = audioRef.current;
+    
+    if (!soundEnabled) {
+      // 添加用户交互检查
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            // 播放成功
+            console.log('Audio started playing');
+          })
+          .catch(error => {
+            console.error('Audio playback failed:', error);
+            // 重置状态
+            setSoundEnabled(false);
+          });
+      }
+    } else {
+      audio.pause();
     }
-  };
+    setSoundEnabled(!soundEnabled);
+  }, [soundEnabled]);
 
-  const handleCameraMouseMove = useCallback(
-    (e) => {
-      if (cameraIsDragging) {
-        const x = e.clientX - cameraDragOffset.x;
-        const y = e.clientY - cameraDragOffset.y;
+  // 初始化音频设置
+  useEffect(() => {
+    const audio = audioRef.current;
+    audio.loop = true;
+    audio.volume = 0.5; // 设置适当的音量
+    
+    // 添加音频加载事件监听
+    const handleCanPlay = () => {
+      console.log('Audio can play');
+      if (soundEnabled) {
+        audio.play().catch(console.error);
+      }
+    };
+    
+    audio.addEventListener('canplay', handleCanPlay);
+    
+    return () => {
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, []);
 
-        // 确保窗口不会被拖出视口
-        const maxX = window.innerWidth - (cameraRef.current?.offsetWidth || 0);
-        const maxY =
-          window.innerHeight - (cameraRef.current?.offsetHeight || 0);
-
-        setCameraPosition({
-          x: Math.max(0, Math.min(x, maxX)),
-          y: Math.max(0, Math.min(y, maxY)),
+  // 监听音频状态变化
+  useEffect(() => {
+    const audio = audioRef.current;
+    
+    if (soundEnabled) {
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Audio playback failed:', error);
+          setSoundEnabled(false);
         });
       }
-    },
-    [cameraIsDragging, cameraDragOffset],
-  );
+    } else {
+      audio.pause();
+    }
+  }, [soundEnabled]);
 
-  const handleCameraMouseUp = () => {
-    setCameraIsDragging(false);
+  // 添加打字机效果的函数
+  const typeHintMessage = useCallback(async (message) => {
+    setIsTypingHint(true);
+    setDisplayedHint('');
+    
+    for (let i = 0; i < message.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 30));
+      setDisplayedHint(prev => prev + message[i]);
+    }
+    setIsTypingHint(false);
+  }, []);
+
+  // 修改显示提示的处理函数
+  const handleShowHint = () => {
+    setShowHint(true);
+    typeHintMessage(hintMessage);
   };
 
-  // 添加相机拖拽事件监听器
-  useEffect(() => {
-    if (cameraIsDragging) {
-      window.addEventListener('mousemove', handleCameraMouseMove);
-      window.addEventListener('mouseup', handleCameraMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleCameraMouseMove);
-      window.removeEventListener('mouseup', handleCameraMouseUp);
-    };
-  }, [cameraIsDragging, handleCameraMouseMove]);
-
   return (
-    <>
-      <BackgroundMusic audioUrl="/music.mp3" />
-      <div className="pixel-dots">{generatePixelDots()}</div>
-      <HintWindow
-        message={hintMessage}
-        isOpen={showHint}
-        onClose={() => setShowHint(false)}
-      />
-      <div className="pet-container">
-        <div className="status-bar">
-          <div className="status-indicator">
-            <div className="status-header">
-              <span className="status-label">Health</span>
-            </div>
-            <div className="progress-container">
-              <div
-                className={`progress-bar health ${
-                  petState.health < 30 ? 'warning' : ''
-                }`}
-                style={{
-                  width: `${Math.min(100, Math.max(0, petState.health))}%`,
-                }}
-              >
-                <span className="progress-value">
-                  {Math.round(petState.health)}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="status-indicator">
-            <div className="status-header">
-              <span className="status-label">Happiness</span>
-            </div>
-            <div className="progress-container">
-              <div
-                className={`progress-bar happiness ${
-                  petState.happiness < 30 ? 'warning' : ''
-                }`}
-                style={{
-                  width: `${Math.min(100, Math.max(0, petState.happiness))}%`,
-                }}
-              >
-                <span className="progress-value">
-                  {Math.round(petState.happiness)}%
-                </span>
-              </div>
-            </div>
+    <div className="w-full h-full relative">
+      {/* 状态条 */}
+      <div className="status-container">
+        <div className={`status-bar health-bar ${petState.health < 30 ? 'warning' : ''}`}>
+          <div className="status-icon health-icon"></div>
+          <div className="progress-container">
+            <div 
+              className="progress health-progress"
+              style={{
+                width: `${Math.min(100, Math.max(0, petState.health))}%`
+              }}
+            />
+            <span className="progress-text">{`${Math.round(petState.health)}%`}</span>
           </div>
         </div>
+        <div className={`status-bar happiness-bar ${petState.happiness < 30 ? 'warning' : ''}`}>
+          <div className="status-icon happiness-icon"></div>
+          <div className="progress-container">
+            <div 
+              className="progress happiness-progress"
+              style={{
+                width: `${Math.min(100, Math.max(0, petState.happiness))}%`
+              }}
+            />
+            <span className="progress-text">{`${Math.round(petState.happiness)}%`}</span>
+          </div>
+        </div>
+      </div>
 
-        <div className="pet-display">
+      {/* 宠物显示框 */}
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="pet-window">
           <div className="window-toolbar">
-            <div className="toolbar-title">REALITYEATER.EXE</div>
-            <span className="window-controls">─ □ ×</span>
+            <span className="window-title">REALITYEATER.EXE</span>
+            <button className="window-close">×</button>
           </div>
-          <div
-            className={`mt-8 mb-8 text-8xl text-center pet-sprite ${status}`}
-          >
-            {currentSprite}
+          <div className="pet-content">
+            <div className={`pet-face ${status}`}>
+              {currentSprite}
+            </div>
           </div>
-
-          {/* 宠物对话窗口 */}
         </div>
-        {showChat ? (
-          <div
-            ref={dialogueRef}
-            className={`pet-dialogue-bubble ${isDragging ? 'dragging' : ''}`}
-            style={{
-              display: showChat ? 'block' : 'none',
-              left: `${dialoguePosition.x}px`,
-              top: `${dialoguePosition.y}px`,
-            }}
-          >
-            <div className="dialogue-toolbar" onMouseDown={handleMouseDown}>
-              <div className="dialogue-title">CHAT.EXE</div>
-              <button
-                className="dialogue-close"
-                onClick={() => setShowChat(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="dialogue-content">
-              {isWaitingResponse ? (
-                <LoadingIndicator />
-              ) : (
-                <p className="typing-text">
-                  {displayedMessage}
-                  {isTyping && <span className="cursor">|</span>}
-                </p>
-              )}
-            </div>
+      </div>
 
-            {showChat && dialogue && !isTyping && (
-              <div className="response-options">
+      {/* 控制按钮 */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4">
+        <button 
+          className="control-button feed-button" 
+          onClick={() => {
+            if (!showCamera) {  // 添加条件检查
+              setShowCamera(true);
+              startCamera();
+            }
+          }}
+        >
+          FEED
+        </button>
+        <button 
+          className="control-button talk-button" 
+          onClick={() => {
+            if (!showChat) {  // 添加条件检查
+              handleChat();
+            }
+          }}
+        >
+          TALK
+        </button>
+        <button 
+          className="control-button hint-button" 
+          onClick={() => {
+            if (!showHint) {  // 添加条件检查
+              handleShowHint();
+            }
+          }}
+        >
+          HINT
+        </button>
+      </div>
+
+      {/* 音频控制按钮 */}
+      <div className="absolute bottom-4 right-4">
+        <button 
+          className={`sound-toggle ${soundEnabled ? 'on' : 'off'}`}
+          onClick={toggleSound}
+        >
+          <div className="toggle-slider"></div>
+        </button>
+      </div>
+
+      {/* 相机窗口 */}
+      {showCamera && (
+        <div 
+          className="camera-window"
+          style={{
+            left: `${windowPositions.camera.x}px`,
+            top: `${windowPositions.camera.y}px`,
+            position: 'fixed'
+          }}
+          onMouseDown={(e) => handleMouseDown(e, 'camera')}
+        >
+          <div className="window-toolbar">
+            <span className="window-title">CAMERA.EXE</span>
+            <button 
+              className="window-close"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClose('camera');
+              }}
+            >×</button>
+          </div>
+          <div className="camera-content">
+            <video ref={videoRef} autoPlay playsInline />
+            <button className="take-photo-btn" onClick={captureImage}>
+              Take Photo
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 聊天窗口 */}
+      {showChat && (
+        <div 
+          className="chat-window"
+          style={{
+            left: `${windowPositions.chat.x}px`,
+            top: `${windowPositions.chat.y}px`,
+            position: 'fixed'
+          }}
+          onMouseDown={(e) => handleMouseDown(e, 'chat')}
+        >
+          <div className="window-toolbar">
+            <span className="window-title">CHAT.EXE</span>
+            <button 
+              className="window-close"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClose('chat');
+              }}
+            >×</button>
+          </div>
+          <div className="chat-content">
+            <div className="chat-message">{displayedMessage}</div>
+            {dialogue && dialogue.options && (
+              <div className="chat-options">
                 {dialogue.options.map((option, index) => (
-                  <button
-                    key={index}
-                    className="response-button"
+                  <button 
+                    key={index} 
+                    className="chat-option"
                     onClick={() => handleResponse(option)}
-                    disabled={isWaitingResponse}
                   >
-                    <span className="response-arrow">►</span>
                     {option}
                   </button>
                 ))}
               </div>
             )}
           </div>
-        ) : null}
+        </div>
+      )}
 
-        {/* 摄像头区域 */}
-        <div
-          className="camera-section"
+      {/* 提示窗口 */}
+      {showHint && (
+        <div 
+          className="hint-window"
           style={{
-            display: showCamera ? 'block' : 'none',
-            position: 'fixed',
-            left: `${cameraPosition.x}px`,
-            top: `${cameraPosition.y}px`,
-            zIndex: 1000,
+            left: `${windowPositions.hint.x}px`,
+            top: `${windowPositions.hint.y}px`,
+            position: 'fixed'
           }}
-          ref={cameraRef}
+          onMouseDown={(e) => handleMouseDown(e, 'hint')}
         >
-          <div className="camera-window">
-            <div
-              className="window-toolbar"
-              onMouseDown={handleCameraMouseDown}
-              style={{ cursor: 'grab' }}
-            >
-              <div className="toolbar-title">CAMERA.EXE</div>
-              <button
-                className="window-close"
-                onClick={() => {
-                  stopCamera();
-                  setShowCamera(false);
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div className="camera-container">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  transform: 'scaleX(-1)',
-                }}
-              />
-              {isCameraActive && (
-                <button className="capture-button" onClick={captureImage}>
-                  Take Photo
-                </button>
-              )}
+          <div className="window-toolbar">
+            <span className="window-title">HINT.EXE</span>
+            <button 
+              className="window-close"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClose('hint');
+              }}
+            >×</button>
+          </div>
+          <div className="hint-content">
+            <pre className="hint-text">{displayedHint}</pre>
+          </div>
+        </div>
+      )}
+
+      {showAnalysis && analysisResult && (
+        <div 
+          className="analysis-window"
+          style={{
+            left: `${windowPositions.analysis.x}px`,
+            top: `${windowPositions.analysis.y}px`,
+            position: 'fixed'
+          }}
+          onMouseDown={(e) => handleMouseDown(e, 'analysis')}
+        >
+          <div className="window-toolbar">
+            <span className="window-title">ANALYSIS.EXE</span>
+            <button 
+              className="window-close"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAnalysis(false);
+              }}
+            >×</button>
+          </div>
+          <div className="analysis-content">
+            <img src={capturedImage} alt="Captured" className="analysis-image" />
+            <div className="analysis-result">
+              {analysisResult.message}
             </div>
           </div>
         </div>
-
-        {/* 已拍摄的图片分析窗口 */}
-        {capturedImage && (
-          <div className="analysis-window">
-            <div className="window-toolbar">
-              <div className="toolbar-title">ANALYSIS.EXE</div>
-              <button
-                className="window-close"
-                onClick={() => {
-                  setCapturedImage(null);
-                  setAnalysisResult('');
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div className="analysis-content">
-              <div className="captured-image-container">
-                <div className="captured-image">
-                  <img
-                    src={capturedImage}
-                    alt="captured"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
-                  />
-                </div>
-                <div
-                  className={`analysis-result ${
-                    isAnalyzing ? 'analyzing' : ''
-                  }`}
-                >
-                  {isAnalyzing ? (
-                    <div className="analyzing-status">
-                      <div className="loading-dots">
-                        <span>Analyzing</span>
-                        <span className="dots">...</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="result-content">
-                      {analysisResult.result ? (
-                        <>
-                          <div className="result-item">
-                            <span className="label">Recognize objects:</span>
-                            <span className="value">{analysisResult.name}</span>
-                          </div>
-                          <div className="result-item">
-                            <span className="label">Reaction:</span>
-                            <span
-                              className={`value ${
-                                analysisResult.isLike ? 'positive' : 'negative'
-                              }`}
-                            >
-                              {analysisResult.isLike
-                                ? 'Very interested！'
-                                : 'Not very interested...'}
-                            </span>
-                          </div>
-                          <div className="result-item">
-                            <span className="label">Reason:</span>
-                            <span className="value reason">
-                              {analysisResult.reason}
-                            </span>
-                          </div>
-                          {/* 添加心情和健康效果显示 */}
-                          <div className="result-item">
-                            <span className="label">Reaction:</span>
-                            <div className="effects">
-                              {analysisResult.moodEffect !== 0 && (
-                                <span
-                                  className={`effect ${
-                                    analysisResult.moodEffect > 0
-                                      ? 'positive'
-                                      : 'negative'
-                                  }`}
-                                >
-                                  Happiness{' '}
-                                  {analysisResult.moodEffect > 0 ? '+' : ''}
-                                  {analysisResult.moodEffect}
-                                </span>
-                              )}
-                              {analysisResult.healthEffect !== 0 && (
-                                <span
-                                  className={`effect ${
-                                    analysisResult.healthEffect > 0
-                                      ? 'positive'
-                                      : 'negative'
-                                  }`}
-                                >
-                                  Health{' '}
-                                  {analysisResult.healthEffect > 0 ? '+' : ''}
-                                  {analysisResult.healthEffect}
-                                </span>
-                              )}
-                              {analysisResult.moodEffect === 0 &&
-                                analysisResult.healthEffect === 0 && (
-                                  <span className="effect neutral">
-                                    no effect
-                                  </span>
-                                )}
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="error-message">
-                          Sorry, recognition failed... (｡•́︿•̀｡)
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 控按钮 */}
-        <div className="control-buttons">
-          <button
-            className="control-button feed-button"
-            onClick={isCameraActive ? stopCamera : startCamera}
-            disabled={cameraPermission === 'denied'}
-          >
-            <span className="camera-icon"></span>
-            {isCameraActive ? 'CLOSE CAMERA' : 'FEED'}
-          </button>
-          <button className="control-button talk-button" onClick={handleChat}>
-            <span className="chat-icon"></span>
-            TALK
-          </button>
-          <button
-            className="control-button hint-button"
-            onClick={() => setShowHint(true)}
-          >
-            <span className="hint-icon"></span>
-            HINT
-          </button>
-        </div>
-
-        {/* 摄像头权限被拒绝的示 */}
-        {cameraPermission === 'denied' && (
-          <div className="relative px-4 py-3 text-red-700 bg-red-100 rounded border border-red-400">
-            <span>
-              Camera access is blocked. Please allow camera access in your
-              browser settings.
-            </span>
-          </div>
-        )}
-      </div>
-    </>
+      )}
+    </div>
   );
 };
 
